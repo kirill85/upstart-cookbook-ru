@@ -1,22 +1,17 @@
-\documentclass[a4paper]{scrbook}
+\documentclass[a4paper,openany]{scrbook}
 %\setcounter{tocdepth}{5}
 %\setcounter{secnumdepth}{5}
 \usepackage[utf8]{inputenc}
 \usepackage[english,russian]{babel}
 \usepackage[T2A]{fontenc}
-\usepackage{color}
+\usepackage[usenames,dvipsnames]{color}
 \usepackage{indentfirst}
-\newcommand{\stanza}[1]{\color{blue} #1}
-\renewcommand{\stanza}[2]{\color{blue} #1 \hspace{0em} \color{red} #2}
-\author{James Hunt, Clint Byrum}
-%\thanks{Colin Watson (Canonical) \
- %   Scott James Remnant (Canonical, Google),  author of Upstart.\
-  %  James Page (Canonical) \
-   % Joel Ebel (Google) \
-    %Mark Russell (Canonical) \
-    %Bradley Ayers \
-    %Kenneth Porter \
-    %Roberto Alsina (Canonical)}
+\usepackage{cmap}
+\newcommand{\event}[1]{\color{green}{#1} \color{black}}
+\newcommand{\stanza}[1]{\color{blue} #1 \color{black}}
+\renewcommand{\stanza}[2]{\color{blue} #1 \color{red} #2 \color{black}}
+\author{James Hunt, Clint Byrum} 
+%\thanks{Colin Watson (Canonical) \and Scott James Remnant (Canonical, Google),  author of Upstart. \and James Page (Canonical) \and Joel Ebel (Google)  \and Mark Russell (Canonical) \and Bradley Ayers \and Kenneth Porter \and Roberto Alsina (Canonical)}
 \title{Upstart. Книга рецептов}
 \date{\today}
 \begin{document}
