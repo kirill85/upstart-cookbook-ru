@@ -1,18 +1,16 @@
-\documentclass[a4paper,openany]{scrbook}
+\documentclass[a4paper,openany,draft]{scrbook}
 %\setcounter{tocdepth}{5}
 %\setcounter{secnumdepth}{5}
+\usepackage{cmap}
 \usepackage[utf8]{inputenc}
 \usepackage[english,russian]{babel}
 \usepackage[T2A]{fontenc}
 \usepackage[usenames,dvipsnames]{color}
 \usepackage{indentfirst}
-\usepackage{cmap}
 \newcommand{\event}[1]{\color{DarkOrchid}{#1} \color{black}}
 \newcommand{\stanza}[1]{\color{blue} #1 \color{black}}
 \renewcommand{\stanza}[2]{\color{blue} #1 \color{red} #2 \color{black}}
-\newcommand{\filepath}[1]{\begin{verbatim}
-#1
-\end{verbatim}}
+\newcommand{\filepath}[1]{\slash #1}
 \author{James Hunt, Clint Byrum} 
 %\thanks{Colin Watson (Canonical) \and Scott James Remnant (Canonical, Google),  author of Upstart. \and James Page (Canonical) \and Joel Ebel (Google)  \and Mark Russell (Canonical) \and Bradley Ayers \and Kenneth Porter \and Roberto Alsina (Canonical)}
 \title{Upstart. Книга рецептов}
@@ -22,4 +20,5 @@
 \tableofcontents
 \include{chapter1}
 \include{chapter2}
+\include{chapter3}
 \end{document}
