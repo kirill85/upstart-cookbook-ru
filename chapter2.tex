@@ -26,14 +26,14 @@
 В таблице ниже приводятся возможные состояния, в которых могут находиться сервисы и допустимые переходы между ними.
 \begin{table}[h]
 \begin{tabular}{|l|l|l|}
-\hline Текущее состояние &  Команда  \\ 
+    \hline Текущее состояние &  Команда & Новое состояние \\ 
 \hline  & start & stop \\ 
 \hline waiting & starting & не определено \\ 
 \hline starting & pre-start & stopping \\ 
 \hline pre-start & spawned & stopping \\ 
 \hline spawned & post-start & stopping \\ 
 \hline post-start & running & stopping \\
-\hline running & stopping & pre-stop или stopping \footnote{} \\
+\hline running & stopping & pre-stop или stopping \footnote{Если в файле конфигурации сервиса присутствовало ключевое слово script или exec и если этот процесс был запущен, то новое состояние будет pre-stop; иначе --- stopping.} \\
 \hline pre-stop & running & stopping \\
 \hline stopping & killed & killed \\
 \hline killed & post-stop & post-stop \\
