@@ -48,13 +48,95 @@
 \end{table}
 \newpage
 Далее указаны значения станс и приведены примеры кода для каждой из них.
-\subsection{Apparmor}
+\section{Apparmor}
 \paragraph{apparmor load} --- загружает указанный профиль доступа AppArmor для данного сервиса в ядро перед тем как запускать этот сервис. Дальнейшее выполнение его главного процесса продолжится уже под управлением загруженного профиля. Синтаксис: \stanza{apparmor load}{<profile-path>}. Пример: \begin{alltt}
 \stanza{apparmor load}{\filepath{etc/apparmor.d/usr.sbin.cupsd}}
 \stanza{exec}{\filepath{usr/sbin/cupsd -F}}
 \end{alltt}
 
 Замечания: \begin{itemize}
-\item file-path должен представлять собой полный путь к профилю AppArmor.
+\item profile-path должен представлять собой полный путь к профилю AppArmor.
 \item Запуск сервиса завершится неудачей если указанного профиля не существует, либо же он не смог загрузиться.
 \end{itemize}
+
+\paragraph{apparmor switch} --- запускает главный процесс сервиса с загруженным профилем AppArmor. Синтаксис: \stanza{apparmor switch}{<profile-name>}, где profile-name --- имя профиля AppArmor. Пример: \begin{alltt}
+\stanza{apparmor switch}{\filepath{usr/bin/cupsd}}
+\stanza{exec}{\filepath{usr/sbin/cupsd -F}}
+\end{alltt}
+
+Замечание: запуск сервиса завершится неудачей если указанного профиля не существует, либо же он еще не загружен.
+
+\section{author} 
+
+Указать автора файла конфигурации, принимает строку заключенную в кавычки. Пример: \begin{alltt}
+\stanza{author}{"George Hacker <hackerm@mail.com>"}
+\end{alltt}
+
+\section{console}
+
+Для всех версий Upstart младше 1.4 значением по умолчанию для стансы console было console none. В дальнейшем им стало значение console log. Если вы используете версию Upstart 1.4 и выше, то для возврата к предыдущему режиму при его запуске следует указать параметр - -no--log.
+
+\paragraph{console log} --- перенаправляет вывод логов в устройство \filepath{dev/null}. В качестве консолей вывода и ошибок будет указан псевдо--терминал такой, что вывод любого сервиса будет сохраняться в директории \filepath{var/log/upstart/} для системных сервисов и в \$HOME/.cache/upstart/ для пользовательских. Положение директории для логов может быть изменено параметром - -logdir <directory> для Upstart. Если пользовательский сервис выполняется в среде Upstart версии меньше 1.7, то console log трактуется для него как console none.
+
+\paragraph{console none} --- перенаправляет стандартные потоки ввода, вывода и ошибок сервиса в файл \filepath{dev/null}.
+
+\paragraph{console output} --- перенаправляет стандартные потоки ввода, вывода и ошибок сервиса на стандартную консоль. Пример: \begin{alltt}
+\stanza{console output}
+\stanza{pre-start script}
+logger -is -t "\$UPSTART\_JOB" "ERROR: foo!"
+exit 1
+\stanza{end script}
+\stanza{exec sleep 999}
+\end{alltt}
+
+\paragraph{console owner} --- аналогично предыдущему за исключением того, что делает сервис владельцем консоли. Это позволяет ему обрабатывать специальные сигналы, наподобие нажатия клавиш <CTRL--C>.
+
+\section{chdir}
+
+Выполняет процесс сервиса в указанной директории directory. Синтаксис: \stanza{chdir}{directory}. Пример: \begin{alltt}
+\stanza{chdir}{\filepath{var/mydaemon}}
+\end{alltt}
+
+\section{chroot}
+
+Выполняет процесс сервиса внутри chroot--окружения в указанной директории. Синтаксис: \stanza{chroot}{directory}.
+
+Заметим, что указанная директория должна уже содержать в себе все необходимые библиотеки для выполнения процесса, включая командный интерпретатор \filepath{bin/sh}. Пример: \begin{alltt}
+\stanza{chroot}{\filepath{srv/chroots/oneiric}}
+\end{alltt} 
+
+\section{description}
+
+Задает однострочный комментарий, принимая как аргумент строку в кавычках. Синтаксис \stanza{description}{string}. Пример: \begin{alltt}
+\stanza{description}{"My OpenSSH service"}
+\end{alltt}
+
+\section{emits}
+
+Описывает множество сигналов, генерируемых данным сервисом. 
+~Синтаксис: \stanza{emits}{<values>}.  Эта станса может быть указана для каждого события, порождаемого сервисом. Кроме того, она поддерживает шаблонные символы, распознаваемы командной оболочкой: звездочку, знак вопроса и квадратные скобки. Например, мост upstart--udev--bridge передает большое количество событий от udev. Вместо того, чтобы описывать каждое из них отдельно, можно прибегнуть к следующему синтаксису: \begin{alltt}
+\stanza{emits}{*--device--*}
+\end{alltt} Еще примеры: \begin{alltt}
+\stanza{emits}{foo--event bar--event wibble--event}
+\stanza{emits}{hello}
+\end{alltt}
+\section{end script}
+
+Эта псевдо--станса служит для завершения следующих скриптовых секций: \begin{itemize}
+\item script
+\item post--start script
+\item pre--start script
+\item pre--stop script
+\item post--stop script
+\end{itemize}
+\section{env}
+Устанавливает переменную окружения и делает ее видимой во всех скриптовых секциях. Синтаксис: \stanza{env}{KEY[=VALUE]}. Пример: \begin{alltt}
+\stanza{env}{myvar="hello world"}
+\stanza{script}
+echo "myvar='\$myvar'" >> \filepath{run/script.log}
+\stanza{end script}
+\end{alltt}
+\section{exec}
+Описывает команду запускающую процесс. Команда должна занимать не более одной строки. В ее описании допустимо использовать подстановочные символы воспринимаемые командной оболочкой --- они тоже будут исполнены как и в обычной консольной команде. ~Синтаксис: \stanza{exec}{command [args]}. Пример: \begin{alltt}
+\stanza{exec}{\filepath{usr/bin/mydaemon - -option foo -v}}
+\end{alltt}
