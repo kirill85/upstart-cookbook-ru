@@ -1,1 +1,60 @@
-\chapter{????? ???????????? ????????}
+\chapter{Конфигурация сервисов Upstart}
+Эта глава содержит в себе описания всех инструкций или станс сервисов Upstart. В таблице ниже приводится их список, разбитый на категории.
+\begin{table}
+\begin{tabular}{|c|c|c|}
+\hline Категория & Станса & В какой версии появилась \\ 
+\hline \multirow{6}{*}{Работа с процессами} & \stanza{exec} &  \\
+ & \stanza{pre--start} & \\
+ & \stanza{post--start} & \\
+ & \stanza{pre--stop} & \\
+ & \stanza{post--stop} & \\
+ & \stanza{script} & \\ 
+\hline \multirow{3}{*}{Условия на события} & \stanza{manual} & 0.67 \\
+ & \stanza{start on} & \\
+ & \stanza{stop on} & \\
+\hline \multirow{2}{*}{Окружение сервиса} & \stanza{env} & \\
+& \stanza{export} & \\
+\hline \multirow{4}{*}{Сервисы, задачи и их перезапуск} & \stanza{normal exit} & \\
+& \stanza{respawn} & \\
+& \stanza{respawn limit} & \\
+& \stanza{task} & \\
+\hline Работа с экземплярами сервиса & \stanza{instance} & \\
+\hline \multirow{5}{*}{Документирование сервиса} & \stanza{author} & \\
+& \stanza{description} & \\
+& \stanza{emits} & \\
+& \stanza{version} & \\
+& \stanza{usage} & 1.5 \\
+\hline \multirow{14}{*}{Работа с окружением процесса} & \stanza{apparmor load} & 1.9 \\
+& \stanza{apparmor switch} & 1.9 \\
+& \stanza{console none} & \\
+& \stanza{console log} & 1.4 \\
+& \stanza{console output} & \\
+& \stanza{console owner} & \\
+& \stanza{chdir} & \\
+& \stanza{limit} & \\
+& \stanza{nice} & \\
+& \stanza{oom score} & \\
+& \stanza{setgid} & 1.4 \\
+& \stanza{setuid} & 1.4 \\
+& \stanza{umask} & \\
+\hline \multirow{6}{*}{Управление процессом} & \stanza{expect fork} & \\
+& \stanza{expect daemon} & \\
+& \stanza{expect stop} & \\
+& \stanza{kill signal} & 1.3 \\
+& \stanza{kill timeout} & \\
+& \stanza{reload signal} & 1.10 \\
+\hline
+\end{tabular}  
+\end{table}
+\newpage
+Далее указаны значения станс и приведены примеры кода для каждой из них.
+\subsection{Apparmor}
+\paragraph{apparmor load} --- загружает указанный профиль доступа AppArmor для данного сервиса в ядро перед тем как запускать этот сервис. Дальнейшее выполнение его главного процесса продолжится уже под управлением загруженного профиля. Синтаксис: \stanza{apparmor load}{<profile-path>}. Пример: \begin{alltt}
+\stanza{apparmor load}{\filepath{etc/apparmor.d/usr.sbin.cupsd}}
+\stanza{exec}{\filepath{usr/sbin/cupsd -F}}
+\end{alltt}
+
+Замечания: \begin{itemize}
+\item file-path должен представлять собой полный путь к профилю AppArmor.
+\item Запуск сервиса завершится неудачей если указанного профиля не существует, либо же он не смог загрузиться.
+\end{itemize}
