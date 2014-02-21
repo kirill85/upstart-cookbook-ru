@@ -1,4 +1,4 @@
-\chapter{Конфигурация сервисов Upstart}
+\chapter{Конфигурация сервисов Upstart} \label{cpt:configuration}
 Эта глава содержит в себе описания всех инструкций или станс сервисов Upstart. В таблице ниже приводится их список, разбитый на категории.
 \begin{table}
 \begin{tabular}{|c|c|c|}
@@ -48,8 +48,8 @@
 \end{table}
 \newpage
 Далее указаны значения станс и приведены примеры кода для каждой из них.
-\section{Apparmor}
-\paragraph{apparmor load} --- загружает указанный профиль доступа AppArmor для данного сервиса в ядро перед тем как запускать этот сервис. Дальнейшее выполнение его главного процесса продолжится уже под управлением загруженного профиля. Синтаксис: \stanza{apparmor load}{<profile-path>}. Пример: \begin{alltt}
+\section{Apparmor} \label{sec:apparmor}
+\paragraph{apparmor load} \label{par:apparmor_load} --- загружает указанный профиль доступа AppArmor для данного сервиса в ядро перед тем как запускать этот сервис. Дальнейшее выполнение его главного процесса продолжится уже под управлением загруженного профиля. Синтаксис: \stanza{apparmor load}{<profile-path>}. Пример: \begin{alltt}
 \stanza{apparmor load}{\filepath{etc/apparmor.d/usr.sbin.cupsd}}
 \stanza{exec}{\filepath{usr/sbin/cupsd -F}}
 \end{alltt}
@@ -59,7 +59,7 @@
 \item Запуск сервиса завершится неудачей если указанного профиля не существует, либо же он не смог загрузиться.
 \end{itemize}
 
-\paragraph{apparmor switch} --- запускает главный процесс сервиса с загруженным профилем AppArmor. Синтаксис: \stanza{apparmor switch}{<profile-name>}, где profile-name --- имя профиля AppArmor. Пример: \begin{alltt}
+\paragraph{apparmor switch} \label{par:apparmor_switch} --- запускает главный процесс сервиса с загруженным профилем AppArmor. Синтаксис: \stanza{apparmor switch}{<profile-name>}, где profile-name --- имя профиля AppArmor. Пример: \begin{alltt}
 \stanza{apparmor switch}{\filepath{usr/bin/cupsd}}
 \stanza{exec}{\filepath{usr/sbin/cupsd -F}}
 \end{alltt}
@@ -140,3 +140,9 @@ echo "myvar='\$myvar'" >> \filepath{run/script.log}
 Описывает команду запускающую процесс. Команда должна занимать не более одной строки. В ее описании допустимо использовать подстановочные символы воспринимаемые командной оболочкой --- они тоже будут исполнены как и в обычной консольной команде. ~Синтаксис: \stanza{exec}{command [args]}. Пример: \begin{alltt}
 \stanza{exec}{\filepath{usr/bin/mydaemon - -option foo -v}}
 \end{alltt}
+\section{expect}
+Следующий раздел является очень важным для понимания функционирования сервисов, порождающих дочерние процессы. С ним рекомендуется ознакомиться \textit{как можно тщательнее}.
+
+Upstart отслеживает PID процессов, принадлежащих сервису. Если определена станса \stanza{instance}, то Upstart будет отслеживать все уникальные PID для данного сервиса.
+
+Если вы не укажете стансу expect, Upstart будет отслеживать \textit{первый} PID сервиса, созданный в результате выполнения инструкций в script или exec. К тому же, большинство сервисов Unix демонизируются, создавая новый процесс, являющийся дочерним по отношению к основному. Так же сервисы часто практикуют <<двойной fork>> чтобы не иметь непосредственной связи с изначальным процессом. В таком случае Upstart должен обязательно иметь возможность отследить все созданные подпроцессы
