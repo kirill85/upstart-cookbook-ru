@@ -303,7 +303,116 @@ start trickery
 И это будет работать, даже если уже выполняется автоматически запущенный экземпляр того же сервиса. Данный способ работает потому что переменная UPSTART\_EVENTS уже установлена как результат выполнения условия start on. В данном случае Upstart установит значение этой переменной в <<foo>>. 
 
 Однако, поскольку при запуске сервиса от имени администратора, значение его обязательного параметра было оставлено пустым, то и UPSTART\_ EVENTS будет присвоено пустое значение. Данное пустое значение может использоваться в качестве уникального для данного экземпляра сервиса \footnote{Но не для других - прим. переводчика}. Для более детальной информации о переменной UPSTART\_EVENTS обращайтесь к разделу \hyperref[sec:EnviromentVariables]{Переменные окружения}.
-\section{Станса kill signal} \label{sec:KillSignal}
+\section{kill signal} \label{sec:KillSignal}
+Станса позволяет определить сигнал, отличный от SIGKILL, в качестве прерывающего процесс. 
+При этом допускается сокращение имени сигнала. Например: \begin{alltt}
+\stanza{kill signal}{SIGUSR1}
+\stanza{kill signal}{USR1}
+\end{alltt}
+\section{kill timeout}
+Позволяет задавать в секундах максимально допустимое время для завершения работы сервиса. По уморлчанию это время равно пяти секундам. Пример: \begin{alltt}
+#foo.conf
+\stanza{exec}{/usr/bin/foo --args}
+\stanza{kill timeout}{10}
+\end{alltt} Upstart будет ожидать завершение работы сервиса foo в течение десяти секунд.
+\section{limit}
+Служит для указания ограничений ресурсов системы для сервиса. Например, мы можем разрешить сервису открыть любое количество файлов: \begin{alltt}
+\stanza{limit}{nofile unlimited unlimited} 
+\end{alltt} где nofile --- число файлов, а далее нижняя и верхняя граница на ресурс.  \footnote{Для уточнения возможных задаваемых лимитов на ресурсы, см. системную справку по init(5) и getlimit(2)} \\
+\textbf{Важно: использование этой стансы в сессионном сервисе может привести к невозможности его запуска из-за нехватки прав.}
+\section{manual}
+Позволяет игнорировать условия станс start on и stop on в тех случаях, когда это необходимо. Не принимает аргументы.
+\section{nice}
+Меняет приоритет диспетчера задач в ядре для данного сервиса. \footnote{Подробности см. в справке по nice(1)}
+Пример: \begin{alltt}
+#Запустить сервис с низшим приоритетом
+\stanza{nice}{19}
+\end{alltt}
+\section{normal exit}
+Позволяет переопределить успешный код возврата отличным от нулевого там, где это необходимо. Пример, меняем код успеха с 0 на 13 \begin{alltt}
+\stanza{normal exit}{0 13}
+\end{alltt}
+Также можно связать коды возврата с определенными системными сигналами в расширенной форме стансы. При этом, как и в стансе kill signal (см. стр.\pageref{sec:KillSignal}), допускается сокращение имен сигналов. Пример \begin{alltt}
+\stanza{normal exit}{0 13 SIGUSR1 SIGWINCH}
+\stanza{normal exit}{0 13 USR1 WINCH}
+\end{alltt}
+\section{oom score}
+Linux имеет в своем составе так называемый <<OOM killer>>. Он служит для обнаружения процессов, потребляющих слишком много оперативной памяти. По срабатыванию <<OOM killer'a>>, ядро посылает сигнал завершения такому процессу и <<убивает>> его. 
 
+Хотя обычно <<OOM killer>> действует на все процессы одинаково, эта станса заставляет его применять отдельные настройки к процессу того сервиса, для которого она указана.
 
+<<Поправочное>> значение передается в виде аргумента стансы и варьируется от \\-999 (что означает никогда не применять OOM killer к сервису) до 1000 (отслеживать потребление памяти сервисом особенно строго). Пример \begin{alltt}
+#Конфиг <<текучего>> сервиса
+\stanza{oom score}{1000}
+
+\stanza{expect daemon}
+\stanza{respawn}
+\stanza{exec}{/usr/bin/leaky-app}
+\end{alltt}
+\section{post--start} \label{sec:PostStart}
+Станса может употребляться совместно со стансами exec или script, пример \begin{alltt}
+\stanza{post-start script}
+while ! mysqladmin ping localhost ; do sleep 1 ; done
+\stanza{end script}
+\end{alltt} Этот код будет выполнен после <<подъема>> сервиса, в котором есть такая станса.
+\section{post--stop} \label{sec:PostStop}
+Станса употребяляется аналогично предыдущей, но срабатывает уже после остановки сервиса. Применяется как правило для очистки использованных ресурсов. Пример \begin{alltt}
+# statd - NSM status monitor
+\stanza{description}{"NSM status monitor"}
+\stanza{author}{"Steve Langasek <steve.langasek@canonical.com>"}
+\stanza{start on}(\event{started} portmap or \event{mounting} TYPE=nfs)
+\stanza{stop on} \event{stopping} portmap
+\stanza{expect fork}
+\stanza{respawn}
+\stanza{env}{DEFAULTFILE=/etc/default/nfs-common}
+\stanza{pre-start script}
+if [ -f "\$DEFAULTFILE" ]; then
+. "\$DEFAULTFILE"
+fi
+[ "x\$NEED_STATD" != xno ] || { stop; exit 0; }
+start portmap || true
+status portmap | grep -q start/running
+\stanza{exec} sm-notify
+\stanza{end script}
+\stanza{script}
+if [ -f "\$DEFAULTFILE" ]; then
+. "\$DEFAULTFILE"
+fi
+if [ "x\$NEED\_STATD" != xno ]; then
+\stanza{exec} rpc.statd -L \$STATDOPTS
+fi
+\stanza{end script}
+\end{alltt}
+Поскольку в файле конфигурации сервиса присутствует станса \hyperref[sec:respawn]{<<respawn>>}, то, при завершении работы с кодом выхода 0, сервис не перезапустится (<<respawn>> действует только в случае завершения работы с ненулевым кодом). Далее, запускается необязательный демон rpc.statd (в том случае, если переменная NEED\_STATD равна <<no>>), иначе Upstart останавливает выполнение данного сервиса. Если все успешно, читается содержимое файла \filepath{etc/defaultnfs-common} и запускается процесс rpc.statd.
+\section{pre--start} \label{sec:PreStart}
+Синтаксис: \stanza{pre--start exec | script}. Используется для подготовки рабочего окружения, необходимого вашему сервису. Очистка кэша и временных каталогов будет хорошей идеей, однако любая <<тяжелая>> задача будет непосильна Upstart'y, так как он предназначен не для этого. Пример \begin{alltt}
+\stanza{pre-start script}
+[ -d "/var/cache/squid" ] || squid -k
+\stanza{end script}
+\end{alltt} Другая причина использовать эту стансу --- остановка запуска сервиса по определенным причинам. Пример \begin{alltt}
+\stanza{pre-start script}
+if ! grep -q 'parent=foo' /etc/bar.conf ; then
+stop ; exit 0
+fi
+\stanza{end script}
+\end{alltt} Заметим, что команда <<stop>>, вызванная без аргументов, распознается как команда остановки конкретного сервиса из контекста его файла конфигурации Upstart.
+\section{pre--stop} \label{sec:PreStop}
+Синтаксис: \stanza{pre--stop exec | script}. Она выполняется перед тем, как сервис испустит событие \event{stopping} и его главный процесс будет убит.
+
+Остановка сервиса вызывает посылку сигнала SIGTERM для него. Если Что-то нужно сделать перед обработкой этого сигнала, делайте это в этой секции. Возможно также, что за счет более аккуратной обработки завершения работы сервиса, необходимость этой стансы для вас отпадет. 
+
+Однако, если время отработки секции post--stop превышает время указанное в стансе kill timeout --- или умолчальные пять секунд --- то ее использование может оказаться плохой идеей.
+\section{reload signal} \label{sec:ReloadSignal}
+Позволяет переопределить сигнал, используемый для перезагрузки конфигурации сервиса. По умолчанию --- это сигнал SIGHUP. Синтаксис: \stanza{reload signal}{<<ИмяСигнала>>}. При это допускается отбрасывание постоянной части SIG* в его имени. Примеры \begin{alltt}
+\stanza{reload signal}{SIGUSR1}
+\stanza{reload signal}{USR1}
+\end{alltt}
+\section{respawn} \label{sec:respawn}
+\textbf{Внимание.} Не используйте в написанном вами файле конфигурации сервиса эту стансу до тех пор, пока не определите верную стансу expect для него же. Иначе это может привести к неприятным последствиям в его работе.
+
+Без этой стансы сервис перейдет в состояние stop/waiting в любом случае, могущем вызвать его остановку --- аварийную или нет.
+
+С этой стансой, без явного указания команды stop для сервиса, он будет стартовать вновь. Сказанное относится к инструкциям в стансах \hyperref[sec:PostStart]{post--start}, \hyperref[sec:PreStart]{pre--start} и \hyperref[sec:PostStop]{post--stop}. Заметим, что на стансу \hyperref[sec:PreStop]{pre--stop} это не распространяется.
+
+Есть множество причин использовать или наоборот, не использовать ее. Например, для большинства сетевых служб использование respawn в файле сервиса будет хорошим решением. Также, это может быть полезным для \hyperref[sec:Task]{\it задач}, которые не завершаются выходным кодом 0 (перезапустить не выполнившийся до конца сервис-задачу).
 \section{Переменные окружения} \label{sec:EnviromentVariables}

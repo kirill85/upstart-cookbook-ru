@@ -19,7 +19,7 @@ RAID, монтирует зашифрованные ФС и т.д.). Далее 
 \item После того как смонтирована последняя файловая система, сервис mountall генерирует событие \event{filesystem}.
 \item После этого стартует сервис rc-sysinit по условию \stanza{start on}{filesystem and net--device--up IFACE=lo}.
 \item rc-sysinit вызывает команду telinit 2 для переключения на уровень выполнения 2. После чего сервис telinit шлёт метод с параметрами \event{runlevel RUNLEVEL=2 PREVLEVEL=N}. Для более подробных сведений смотрите раздел \ref{sec:runlevel}
-\item Событие \event{runlevel} служит сигналом к запуску множества других сервисов, включая и \filepath{etc/init/rc.conf} для совместимости с со старыми сервисами в стиле System V.
+\item Событие \event{runlevel} служит сигналом к запуску множества других сервисов, включая и \filepath{etc/init/rc.conf} для совместимости со старыми сервисами в стиле System V.
 \end{enumerate}
 \section{Выключение}
 Следует усвоить основные положения относящиеся к завершению работы системы под управлением Upstart: \begin{itemize}
@@ -31,7 +31,7 @@ RAID, монтирует зашифрованные ФС и т.д.). Далее 
 
 Рассмотрим теперь подробнее действия Upstart при останове системы, предполагается, что текущий runlevel равен 2: \begin{enumerate}
 \item Upstart посылает событие \event{runlevel RUNLEVEL=0 PREVLEVEL=2}.
-\item Далее запускается сервис \filepath{etc/init/rc.conf}, который в свою очередь исполняет сценарий \filepath{/etc/init.d/rc}.
+\item Далее запускается сервис \filepath{etc/init/rc.conf}, который в свою очередь исполняет сценарий \filepath{etc/init.d/rc}.
 \item Этот сценарий выполняет имеющиеся скрипты в директории \filepath{etc/rc0.d/} для остановки сервисов System V.
 \item Далее запускается сценарий \filepath{etc/init.d/sendsigs}, этот сценарий убивает все еще не остановившиеся сервисы, включая сервисы Upstart.
 \end{enumerate}

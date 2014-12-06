@@ -1,4 +1,4 @@
-\documentclass[a4paper,draft]{scrbook}
+\documentclass[a4paper,openany]{scrbook}
 %\setcounter{tocdepth}{5}
 %\setcounter{secnumdepth}{5}
 \usepackage{cmap}
@@ -9,13 +9,32 @@
 \usepackage{indentfirst}
 \usepackage{multirow}
 \usepackage{alltt}
-\usepackage{hyperref}
+\usepackage[colorlinks]{hyperref}
+\hypersetup{
+    bookmarks=true,         % show bookmarks bar?
+    unicode=false,          % non-Latin characters in Acrobat’s bookmarks
+    pdftoolbar=true,        % show Acrobat’s toolbar?
+    pdfmenubar=true,        % show Acrobat’s menu?
+    pdffitwindow=false,     % window fit to page when opened
+    pdfstartview={FitH},    % fits the width of the page to the window
+    pdftitle={My title},    % title
+    pdfauthor={Author},     % author
+    pdfsubject={Subject},   % subject of the document
+    pdfcreator={Creator},   % creator of the document
+    pdfproducer={Producer}, % producer of the document
+    pdfkeywords={keyword1} {key2} {key3}, % list of keywords
+    pdfnewwindow=true,      % links in new PDF window
+    colorlinks=true,       % false: boxed links; true: colored links
+    linkcolor=blue,          % color of internal links (change box color with linkbordercolor)
+    citecolor=green,        % color of links to bibliography
+    filecolor=magenta,      % color of file links
+    urlcolor=cyan           % color of external links
+}
 \newcommand{\event}[1]{\color{DarkOrchid}{#1} \color{black}}
 \newcommand{\stanza}[1]{\color{blue} #1 \color{black}}
 \renewcommand{\stanza}[2]{\color{blue} #1 \color{red} #2 \color{black}}
 \newcommand{\filepath}[1]{\slash #1}
-\author{James Hunt, Clint Byrum} 
-%\thanks{Colin Watson (Canonical) \and Scott James Remnant (Canonical, Google),  author of Upstart. \and James Page (Canonical) \and Joel Ebel (Google)  \and Mark Russell (Canonical) \and Bradley Ayers \and Kenneth Porter \and Roberto Alsina (Canonical)}
+\author{James Hunt \and Clint Byrum\thanks{Отдельная благодарность Colin Watson (Canonical), Scott James Remnant (Canonical, Google), автор Upstart, James Page (Canonical), Joel Ebel (Google), Mark Russell (Canonical), Bradley Ayers, Kenneth Porter, Roberto Alsina (Canonical)}} 
 \title{Upstart. Книга рецептов}
 \date{\today}
 \begin{document}
