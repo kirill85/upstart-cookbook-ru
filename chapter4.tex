@@ -504,5 +504,40 @@ start on
 \stanza{stop on}{\event{stopped}other-service}
 \end{alltt}
 \section{task}
-Концептуально \textit{задачи} представляют собой короткоживущие сервисы.
+Концептуально \textit{задачи} представляют собой короткоживущие сервисы. Без этой стансы служба не будет разблокирована, пока не пройдет фазу started. В этом случае она испускает событие \event{starting}, выполняется (если есть) секция pre--start, а затем основная, затем выполняется (если есть) секция post--start и испускается событие \event{started}. На всех этих этапах может осуществляться реакция на поступающие события.
+
+Со стансой task служба блокируется для всех поступающих событий вплоть до того момента, когда она достигнет состояния stopped.
+
+Типичным вариантом использования стансы является запуск по условию некоей подготовительной программы, необходимой для отработки другого (главного) сервиса.
+
+Пример файла конфигурации: \begin{alltt}
+# pre-warm-memcache
+\stanza{start on}{\event{started}memcached}
+\stanza{task}
+\stanza{exec}{/path/to/pre-warm-memcached}
+\end{alltt} 
+Также может быть добавлен другой демон queue-worker, который обрабатывает очередь запросов в случае остановки сервиса memcached: \begin{alltt}
+# queue-worker
+\stanza{start on}{\event{stopped}pre-warm-memcache}
+\stanza{stop on}{\event{stopping}memcached}
+\stanza{respawn}
+\stanza{exec}{/usr/local/bin/queue-worker}
+\end{alltt} 
+Ключевой момент демонстрирует конструкция start on stopped pre-warm-memcache: это означает запуск только в тот момент, когда задача будет полностью завершена.
+\section{umask}
+Синтаксис: umask <восьмеричное\_число>. Задает режим доступа для запущенного сервиса. См. man 2 umask для выяснения деталей. Пример: \begin{alltt}
+\stanza{umask}{0002}
+\end{alltt}  
+\section{usage}
+Выводит краткое текстовое сообщение о правильном запуске сервиса при попытке его запуска пользователем. Пример: \begin{alltt}
+\stanza{instance}{\$DB}
+\stanza{usage}{"DB - name of database instance"}
+\end{alltt}
+Станса срабатывает при запуске сервиса без корректно переданных ему параметров.
+\section{version}
+Описательная станса. Служит для указания версии сервиса. Не обрабатывает утилитой init.
+
+Пример: \begin{alltt}
+\stanza{version}{"1.0"}
+\end{alltt}
 \section{Переменные окружения} \label{sec:EnviromentVariables}
