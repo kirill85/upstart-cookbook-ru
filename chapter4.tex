@@ -1,0 +1,543 @@
+\chapter{Конфигурация сервисов Upstart} \label{cpt:configuration}
+Эта глава содержит в себе описания всех инструкций или станс сервисов Upstart. В таблице ниже приводится их список, разбитый на категории.
+\begin{table}
+\begin{tabular}{|c|c|c|}
+\hline Категория & Станса & В какой версии появилась \\ 
+\hline \multirow{6}{*}{Работа с процессами} & \stanza{exec} &  \\
+ & \stanza{pre--start} & \\
+ & \stanza{post--start} & \\
+ & \stanza{pre--stop} & \\
+ & \stanza{post--stop} & \\
+ & \stanza{script} & \\ 
+\hline \multirow{3}{*}{Условия на события} & \stanza{manual} & 0.67 \\
+ & \stanza{start on} & \\
+ & \stanza{stop on} & \\
+\hline \multirow{2}{*}{Окружение сервиса} & \stanza{env} & \\
+& \stanza{export} & \\
+\hline \multirow{4}{*}{Сервисы, задачи и их перезапуск} & \stanza{normal exit} & \\
+& \stanza{respawn} & \\
+& \stanza{respawn limit} & \\
+& \stanza{task} & \\
+\hline Работа с экземплярами сервиса & \stanza{instance} & \\
+\hline \multirow{5}{*}{Документирование сервиса} & \stanza{author} & \\
+& \stanza{description} & \\
+& \stanza{emits} & \\
+& \stanza{version} & \\
+& \stanza{usage} & 1.5 \\
+\hline \multirow{14}{*}{Работа с окружением процесса} & \stanza{apparmor load} & 1.9 \\
+& \stanza{apparmor switch} & 1.9 \\
+& \stanza{console none} & \\
+& \stanza{console log} & 1.4 \\
+& \stanza{console output} & \\
+& \stanza{console owner} & \\
+& \stanza{chdir} & \\
+& \stanza{limit} & \\
+& \stanza{nice} & \\
+& \stanza{oom score} & \\
+& \stanza{setgid} & 1.4 \\
+& \stanza{setuid} & 1.4 \\
+& \stanza{umask} & \\
+\hline \multirow{6}{*}{Управление процессом} & \stanza{expect fork} & \\
+& \stanza{expect daemon} & \\
+& \stanza{expect stop} & \\
+& \stanza{kill signal} & 1.3 \\
+& \stanza{kill timeout} & \\
+& \stanza{reload signal} & 1.10 \\
+\hline
+\end{tabular}  
+\end{table}
+\newpage
+Далее указаны значения станс и приведены примеры кода для каждой из них.
+\section{Apparmor} \label{sec:apparmor}
+\paragraph{apparmor load} \label{par:apparmor_load} --- загружает указанный профиль доступа AppArmor для данного сервиса в ядро перед тем как запускать этот сервис. Дальнейшее выполнение его главного процесса продолжится уже под управлением загруженного профиля. Синтаксис: \stanza{apparmor load}{<profile-path>}. Пример: \begin{alltt}
+\stanza{apparmor load}{\filepath{etc/apparmor.d/usr.sbin.cupsd}}
+\stanza{exec}{\filepath{usr/sbin/cupsd -F}}
+\end{alltt}
+
+Замечания: \begin{itemize}
+\item profile-path должен представлять собой полный путь к профилю AppArmor.
+\item Запуск сервиса завершится неудачей если указанного профиля не существует, либо же он не смог загрузиться.
+\end{itemize}
+
+\paragraph{apparmor switch} \label{par:apparmor_switch} --- запускает главный процесс сервиса с загруженным профилем AppArmor. Синтаксис: \stanza{apparmor switch}{<profile-name>}, где profile-name --- имя профиля AppArmor. Пример: \begin{alltt}
+\stanza{apparmor switch}{\filepath{usr/bin/cupsd}}
+\stanza{exec}{\filepath{usr/sbin/cupsd -F}}
+\end{alltt}
+
+Замечание: запуск сервиса завершится неудачей если указанного профиля не существует, либо же он еще не загружен.
+
+\section{author} 
+
+Указать автора файла конфигурации, принимает строку заключенную в кавычки. Пример: \begin{alltt}
+\stanza{author}{"George Hacker <hackerm@mail.com>"}
+\end{alltt}
+
+\section{console}
+
+Для всех версий Upstart младше 1.4 значением по умолчанию для стансы console было console none. В дальнейшем им стало значение console log. Если вы используете версию Upstart 1.4 и выше, то для возврата к предыдущему режиму при его запуске следует указать параметр - -no--log.
+
+\paragraph{console log} --- перенаправляет вывод логов в устройство \filepath{dev/null}. В качестве консолей вывода и ошибок будет указан псевдо--терминал такой, что вывод любого сервиса будет сохраняться в директории \filepath{var/log/upstart/} для системных сервисов и в \$HOME/.cache/upstart/ для пользовательских. Положение директории для логов может быть изменено параметром - -logdir <directory> для Upstart. Если пользовательский сервис выполняется в среде Upstart версии меньше 1.7, то console log трактуется для него как console none.
+
+\paragraph{console none} --- перенаправляет стандартные потоки ввода, вывода и ошибок сервиса в файл \filepath{dev/null}.
+
+\paragraph{console output} --- перенаправляет стандартные потоки ввода, вывода и ошибок сервиса на стандартную консоль. Пример: \begin{alltt}
+\stanza{console output}
+\stanza{pre-start script}
+logger -is -t "\$UPSTART\_JOB" "ERROR: foo!"
+exit 1
+\stanza{end script}
+\stanza{exec sleep 999}
+\end{alltt}
+
+\paragraph{console owner} --- аналогично предыдущему за исключением того, что делает сервис владельцем консоли. Это позволяет ему обрабатывать специальные сигналы, наподобие нажатия клавиш <CTRL--C>.
+
+\section{chdir}
+
+Выполняет процесс сервиса в указанной директории directory. Синтаксис: \stanza{chdir}{directory}. Пример: \begin{alltt}
+\stanza{chdir}{\filepath{var/mydaemon}}
+\end{alltt}
+
+\section{chroot}
+
+Выполняет процесс сервиса внутри chroot--окружения в указанной директории. Синтаксис: \stanza{chroot}{directory}.
+
+Заметим, что указанная директория должна уже содержать в себе все необходимые библиотеки для выполнения процесса, включая командный интерпретатор \filepath{bin/sh}. Пример: \begin{alltt}
+\stanza{chroot}{\filepath{srv/chroots/oneiric}}
+\end{alltt} 
+
+\section{description}
+
+Задает однострочный комментарий, принимая как аргумент строку в кавычках. Синтаксис \stanza{description}{string}. Пример: \begin{alltt}
+\stanza{description}{"My OpenSSH service"}
+\end{alltt}
+
+\section{emits}
+
+Описывает множество сигналов, генерируемых данным сервисом. 
+~Синтаксис: \stanza{emits}{<values>}.  Эта станса может быть указана для каждого события, порождаемого сервисом. Кроме того, она поддерживает шаблонные символы, распознаваемы командной оболочкой: звездочку, знак вопроса и квадратные скобки. Например, мост upstart--udev--bridge передает большое количество событий от udev. Вместо того, чтобы описывать каждое из них отдельно, можно прибегнуть к следующему синтаксису: \begin{alltt}
+\stanza{emits}{*--device--*}
+\end{alltt} Еще примеры: \begin{alltt}
+\stanza{emits}{foo--event bar--event wibble--event}
+\stanza{emits}{hello}
+\end{alltt}
+\section{end script}
+
+Эта псевдо--станса служит для завершения следующих скриптовых секций: \begin{itemize}
+\item script
+\item post--start script
+\item pre--start script
+\item pre--stop script
+\item post--stop script
+\end{itemize}
+\section{env}
+Устанавливает переменную окружения и делает ее видимой во всех скриптовых секциях. Синтаксис: \stanza{env}{KEY[=VALUE]}. Пример: \begin{alltt}
+\stanza{env}{myvar="hello world"}
+\stanza{script}
+echo "myvar='\$myvar'" >> \filepath{run/script.log}
+\stanza{end script}
+\end{alltt}
+\section{exec}
+Описывает команду запускающую процесс. Команда должна занимать не более одной строки. В ее описании допустимо использовать подстановочные символы воспринимаемые командной оболочкой --- они тоже будут исполнены как и в обычной консольной команде. ~Синтаксис: \stanza{exec}{command [args]}. Пример: \begin{alltt}
+\stanza{exec}{\filepath{usr/bin/mydaemon - -option foo -v}}
+\end{alltt}
+\section{expect}
+Следующий раздел является очень важным для понимания функционирования сервисов, порождающих дочерние процессы. С ним рекомендуется ознакомиться \textit{как можно тщательнее}.
+
+Upstart отслеживает PID процессов, принадлежащих сервису. Если определена станса \stanza{instance}, то Upstart будет отслеживать все уникальные PID для данного сервиса.
+
+Если вы не укажете стансу expect, Upstart будет отслеживать \textit{первый} PID сервиса, созданный в результате выполнения инструкций в script или exec. К тому же, большинство сервисов Unix демонизируются, создавая новый процесс, являющийся дочерним по отношению к основному. Так же сервисы часто практикуют <<двойной fork>> чтобы не иметь непосредственной связи с изначальным процессом. В таком случае Upstart должен обязательно иметь возможность отследить все созданные подпроцессы, используйте стансу expect fork или expect daemon, чтобы дать возможность Upstart'у подсчитать количество подпроцессов с помощью pcount.
+
+Для определения конечного PID процесса, который будет использоваться сервисом, необходимо ждать долгое время пока он сделает вызов функции fork. Сам по себе Upstart не может узнать этого после того как будет запущен сервис, поскольку он может породить сколько угодно дочерних процессов, которые могут породить процессы сами. Для того, чтобы дать возможность Upstart отследить <<главный>> PID необходимо использовать стансу expect.
+
+Ее синтаксис прост и вам необязательно дожидаться того времени, когда процесс сервиса вызовет метод fork.
+
+Замечание: \textit{большинство демонов порождают дочерний процесс дважды}.
+
+Если ваша программа не <<демонизируется>> или выполняется <<на переднем плане>>, то очень просто использовать эту стансу и заставить процесс не порождать дочерние процессы. Одна из возможностей состоит в том, чтобы Upstart послал событие вида \event{started JOB=yourjob} как можно раньше до запуска и полной инициализации процесса сервиса. 
+
+И напоследок: станса expect применима \textit{только} к секциям exec и script.
+
+Все это важно понимать в плане использования возможностей, связанных с expect, для двух разных, но дополняющих друг друга задач: \begin{itemize}
+\item Отслеживания готовности служб.
+\item Отслеживания PID'ов. 
+\end{itemize} 
+\paragraph{expect fork}
+Upstart будет отслеживать процесс, использовавший системный вызов fork(2).
+
+Некоторые демоны, создавая новую копию себя, испускают сигнал SIGHUP, что означает потерю отслеживания их PID'а при срабатывании стансы \stanza{reload}. В этом случае станса expect fork не может быть корректно использована. Смотри раздел "Поведение демонов" %\ref{sec:daemon behavior}.
+\paragraph{expect daemon}
+Upstart отслеживает процесс, если он вызывает fork(2) дважды.
+\paragraph{expect stop}
+Указывается если главный процесс сервиса испускает сигнал SIGSTOP в качестве индикатора готовности. init будет ждать этот сигнал и в случае его появления предпримет следующее: \begin{enumerate}
+\item Немедленно пошлет процессу сигнал SIGCONT.
+\item Выполнит секцию post-start если таковая имеется.
+\end{enumerate}
+Это действует только когда сервис запущен.
+\paragraph{Метод подсчета числа форков сервиса}
+Вы можете использовать утилиту strace для подсчета числа вызовов fork(2) во время работы сервиса, например, использовав следующие команды: \begin{alltt}
+sudo strace -o /tmp/strace.log -fFv /usr/bin/myapp --arg foo --hello wibble &
+
+#Через некоторое время
+sudo killall -9 strace
+
+#Узнать число форков и выбрать нужную команду: 1=> expect fork, 2=> expect daemon
+\begin{verbatim*}
+sudo egrep "\<(fork|clone)\>\(" /tmp/strace.log | wc | awk '{print $1}'
+\end{verbatim*}
+\end{alltt}
+
+Далее приведена таблица возможных исходов запуска демона при употреблении стансы expect. 
+\begin{table}[Ht!]
+\begin{tabular}{cccc}
+\hline Число форков \vline & \multicolumn{3}{c}{Вид стансы expect} \\
+\hline & Не указана & expect fork & expect daemon \\
+\hline 0 \vline & Все хорошо & Старт неудачный & Старт неудачный \\
+\hline 1 \vline & Не определится PID & Все хорошо & Старт неудачный  \\
+\hline 2 \vline & Не определится PID  & Не определится PID & Все хорошо  \\
+\hline
+\end{tabular} 
+\end{table}
+
+\paragraph{Восстановление после неверно указанной стансы expect}
+Случай первый: старт демона завис.  
+
+В этом случае необходимо прервать выполнение команды запуска вручную, например нажав клавиши <Control-C>. Затем необходимо выполнить команду initctl status <jobname> для выяснения его PID'a и состояния. 
+Будет получен вывод вроде следующего \begin{alltt}
+jobname start/spawned, process 1234
+\end{alltt}
+Далее нужно выполнить kill для этого PID'a и снова выполнить команду initctl status <jobname>, дабы проконтролировать состояние сервиса. Он должен быть остановлен. Дальше необходимо внести корректировки в стансу expect в конфигурационном файле сервиса.
+
+Случай второй: отслеживается неверный PID.
+
+В этом случае, если дать команду initctl status <myjob>, будет выведено следующее ~сообщение: \begin{alltt}
+myjob stop/waiting
+\end{alltt}. После этого неоходимо найти настоящий pid процесса, используя утилиту ps и помня, что родительский pid всегда будет равен 1. После этого необходимо убить процесс командой kill по его найденному pid; после чего внести изменения в вид стансы expect.
+\section{export}
+Экспортирует все переменные, установленные перед этим стансой env со всеми событиями, испускаемыми данным сервисом, см. \autoref{cpt:job_lifecycle}. Заметим, что имя экпортируемой переменной не должно начинаться со знака доллара.
+Пример: \begin{alltt}
+\stanza{env}{myvar}="Hello world"
+\stanza{export}{myvar}
+\end{alltt} 
+\section{instance}
+Иногда возникает необходимость запустить тот же самый сервис, но с другими аргументами. Для решения этой проблемы предназначена станса \stanza{instance}. Пример содержимого файла конфигурации некоторого сервиса foo - foo.conf: \begin{alltt}
+instance \$BAR
+script
+. /etc/default/myapp-\${BAR}
+echo "hello from instance \$BAR"
+sleep 999
+end script
+\end{alltt} Пример выше определяет множество экземпляров сервиса foo благодаря использованию стансы \stanza{instance}, за которой следует имя переменной, обязательно начинающееся со знака доллара. 
+Заметим, что этот сервис --- сервис во множестве экземпляров: употребление стансы instance заставляет Upstart каждый раз при запуске сервиса, присваивать ему новый PID. 
+
+Теперь попробуем запустить этот сервис: \begin{alltt}
+sudo start foo
+start: Unknown parameter: BAR
+\end{alltt} Вот так: запуск сервиса без переданного ему параметра отныне недопустим. Попробуем передать параметр сервису при запуске: \begin{alltt}
+sudo start foo BAR=bar
+foo (bar) start/running, process 1234
+\end{alltt}. Как видим, процесс запущен успешно. Запустим его снова с тем же параметром: \begin{alltt}
+sudo start foo BAR=bar
+start: Job is already running: foo (bar)
+\end{alltt}
+Как видим, Upstart не дает нам запустить несколько раз подряд идентичный экземпляр сервиса. Теперь поменяем значение параметра на другое: \begin{alltt}
+sudo start foo BAR=baz
+foo (baz) start/running, process 1235
+\end{alltt} Хорошо, теперь у нас есть две копии одного сервиса, запущенные с разными параметрами: \begin{alltt}
+initctl list | grep ^foo
+foo (bar) start/running, process 1234
+foo (baz) start/running, process 1235
+\end{alltt} Теперь запустим еще одну копию сервиса \begin{alltt}
+sudo start foo BAR="hello world"
+initctl list | grep ^foo
+foo (bar) start/running, process 1234
+foo (baz) start/running, process 1235
+foo (hello world) start/running, process 1236
+\end{alltt} Теперь попробуем остановить этот сервис \begin{alltt}
+sudo stop foo
+stop: Unknown parameter: BAR
+\end{alltt} На сей раз у нас не получилось остановить сервис, потому что Upstart не знает, к какому именно экземпляру нужно применить останов. Учтем этот факт и напишем простой скрипт, останавливающий все экземпляры данного сервиса. \begin{alltt}
+initctl list | grep "^foo " | cut -d\ ( -f2 | cut -d\ ) -f1 | while read i
+do
+sudo stop foo BAR="\$i"
+done
+foo stop/waiting
+foo stop/waiting
+foo stop/waiting
+\end{alltt}
+\subsection*{Другой, более жизненный пример}
+Рассмотрим сервис queue-worker, сохраняющий свой работу в директориях, расположенных в /var/lib/queue. Ниже приведен его файл конфигурации Upstart \begin{alltt}
+# queue-workers
+\stanza{start on}{started} memcached
+\stanza{task}
+\stanza{script}
+for dir in `ls /var/lib/queues` ; do
+start queue-worker QUEUE=\$dir
+done
+\stanza{end script}
+\end{alltt} и другой \begin{alltt}
+# queue-worker
+\stanza{stop on}{stopping} memcached
+\stanza{respawn}
+\stanza{instance} \$QUEUE
+\stanza{exec} /usr/local/bin/queue-worker \$QUEUE
+\end{alltt}
+В этом случае Upstart будет запускать этот сервис с уникальными аргументами после запуска сервиса memcached и останавливать одновременно с ним. При этом заметим, что \begin{itemize}
+\item Во--первых, станса instance может служить для объявления нескольких переменных сразу же.
+\item Во--вторых, она должна объявлять как минимум одну переменную, то есть не быть пустой.
+\item В--третьих, имя объявляемой переменной обязательно должно начинаться со знака доллара.
+\end{itemize}
+Пример. \begin{verbatim}
+instance ${myvar1}hello${myvar2}-foo/\wibble${var3}{$JOB}
+\end{verbatim}
+\subsection{Запуск сервисов без указания значений параметров}
+Иногда бывает необходимо обеспечить запуск уникального экземпляра сервиса с неким параметром по умолчанию, без необходимости его явной передачи при запуске. Для решения этой проблемы можно использовать следующий трюк 
+\begin{alltt}
+# /etc/init/trickery.conf
+start on foo
+instance \$UPSTART_EVENTS
+env UPSTART_EVENTS=
+\end{alltt} Теперь запустим сервис trickery от администратора: 
+\begin{alltt}
+start trickery
+\end{alltt} 
+И это будет работать, даже если уже выполняется автоматически запущенный экземпляр того же сервиса. Данный способ работает потому что переменная UPSTART\_EVENTS уже установлена как результат выполнения условия start on. В данном случае Upstart установит значение этой переменной в <<foo>>. 
+
+Однако, поскольку при запуске сервиса от имени администратора, значение его обязательного параметра было оставлено пустым, то и UPSTART\_ EVENTS будет присвоено пустое значение. Данное пустое значение может использоваться в качестве уникального для данного экземпляра сервиса \footnote{Но не для других - прим. переводчика}. Для более детальной информации о переменной UPSTART\_EVENTS обращайтесь к разделу \hyperref[sec:EnviromentVariables]{Переменные окружения}.
+\section{kill signal} \label{sec:KillSignal}
+Станса позволяет определить сигнал, отличный от SIGKILL, в качестве прерывающего процесс. 
+При этом допускается сокращение имени сигнала. Например: \begin{alltt}
+\stanza{kill signal}{SIGUSR1}
+\stanza{kill signal}{USR1}
+\end{alltt}
+\section{kill timeout}
+Позволяет задавать в секундах максимально допустимое время для завершения работы сервиса. По уморлчанию это время равно пяти секундам. Пример: \begin{alltt}
+#foo.conf
+\stanza{exec}{/usr/bin/foo --args}
+\stanza{kill timeout}{10}
+\end{alltt} Upstart будет ожидать завершение работы сервиса foo в течение десяти секунд.
+\section{limit}
+Служит для указания ограничений ресурсов системы для сервиса. Например, мы можем разрешить сервису открыть любое количество файлов: \begin{alltt}
+\stanza{limit}{nofile unlimited unlimited} 
+\end{alltt} где nofile --- число файлов, а далее нижняя и верхняя граница на ресурс.  \footnote{Для уточнения возможных задаваемых лимитов на ресурсы, см. системную справку по init(5) и getlimit(2)} \\
+\textbf{Важно: использование этой стансы в сессионном сервисе может привести к невозможности его запуска из-за нехватки прав.}
+\section{manual}
+Позволяет игнорировать условия станс start on и stop on в тех случаях, когда это необходимо. Не принимает аргументы.
+\section{nice}
+Меняет приоритет диспетчера задач в ядре для данного сервиса. \footnote{Подробности см. в справке по nice(1)}
+Пример: \begin{alltt}
+#Запустить сервис с низшим приоритетом
+\stanza{nice}{19}
+\end{alltt}
+\section{normal exit}
+Позволяет переопределить успешный код возврата отличным от нулевого там, где это необходимо. Пример, меняем код успеха с 0 на 13 \begin{alltt}
+\stanza{normal exit}{0 13}
+\end{alltt}
+Также можно связать коды возврата с определенными системными сигналами в расширенной форме стансы. При этом, как и в стансе kill signal (см. стр.\pageref{sec:KillSignal}), допускается сокращение имен сигналов. Пример \begin{alltt}
+\stanza{normal exit}{0 13 SIGUSR1 SIGWINCH}
+\stanza{normal exit}{0 13 USR1 WINCH}
+\end{alltt}
+\section{oom score}
+Linux имеет в своем составе так называемый <<OOM killer>>. Он служит для обнаружения процессов, потребляющих слишком много оперативной памяти. По срабатыванию <<OOM killer'a>>, ядро посылает сигнал завершения такому процессу и <<убивает>> его. 
+
+Хотя обычно <<OOM killer>> действует на все процессы одинаково, эта станса заставляет его применять отдельные настройки к процессу того сервиса, для которого она указана.
+
+<<Поправочное>> значение передается в виде аргумента стансы и варьируется от \\-999 (что означает никогда не применять OOM killer к сервису) до 1000 (отслеживать потребление памяти сервисом особенно строго). Пример \begin{alltt}
+#Конфиг <<текучего>> сервиса
+\stanza{oom score}{1000}
+
+\stanza{expect daemon}
+\stanza{respawn}
+\stanza{exec}{/usr/bin/leaky-app}
+\end{alltt}
+\section{post--start} \label{sec:PostStart}
+Станса может употребляться совместно со стансами exec или script, пример \begin{alltt}
+\stanza{post-start script}
+while ! mysqladmin ping localhost ; do sleep 1 ; done
+\stanza{end script}
+\end{alltt} Этот код будет выполнен после <<подъема>> сервиса, в котором есть такая станса.
+\section{post--stop} \label{sec:PostStop}
+Станса употребяляется аналогично предыдущей, но срабатывает уже после остановки сервиса. Применяется как правило для очистки использованных ресурсов. Пример \begin{alltt}
+# statd - NSM status monitor
+\stanza{description}{"NSM status monitor"}
+\stanza{author}{"Steve Langasek <steve.langasek@canonical.com>"}
+\stanza{start on}(\event{started} portmap or \event{mounting} TYPE=nfs)
+\stanza{stop on} \event{stopping} portmap
+\stanza{expect fork}
+\stanza{respawn}
+\stanza{env}{DEFAULTFILE=/etc/default/nfs-common}
+\stanza{pre-start script}
+if [ -f "\$DEFAULTFILE" ]; then
+. "\$DEFAULTFILE"
+fi
+[ "x\$NEED_STATD" != xno ] || { stop; exit 0; }
+start portmap || true
+status portmap | grep -q start/running
+\stanza{exec} sm-notify
+\stanza{end script}
+\stanza{script}
+if [ -f "\$DEFAULTFILE" ]; then
+. "\$DEFAULTFILE"
+fi
+if [ "x\$NEED\_STATD" != xno ]; then
+\stanza{exec} rpc.statd -L \$STATDOPTS
+fi
+\stanza{end script}
+\end{alltt}
+Поскольку в файле конфигурации сервиса присутствует станса \hyperref[sec:respawn]{<<respawn>>}, то, при завершении работы с кодом выхода 0, сервис не перезапустится (<<respawn>> действует только в случае завершения работы с ненулевым кодом). Далее, запускается необязательный демон rpc.statd (в том случае, если переменная NEED\_STATD равна <<no>>), иначе Upstart останавливает выполнение данного сервиса. Если все успешно, читается содержимое файла \filepath{etc/defaultnfs-common} и запускается процесс rpc.statd.
+\section{pre--start} \label{sec:PreStart}
+Синтаксис: \stanza{pre--start exec | script}. Используется для подготовки рабочего окружения, необходимого вашему сервису. Очистка кэша и временных каталогов будет хорошей идеей, однако любая <<тяжелая>> задача будет непосильна Upstart'y, так как он предназначен не для этого. Пример \begin{alltt}
+\stanza{pre-start script}
+[ -d "/var/cache/squid" ] || squid -k
+\stanza{end script}
+\end{alltt} Другая причина использовать эту стансу --- остановка запуска сервиса по определенным причинам. Пример \begin{alltt}
+\stanza{pre-start script}
+if ! grep -q 'parent=foo' /etc/bar.conf ; then
+stop ; exit 0
+fi
+\stanza{end script}
+\end{alltt} Заметим, что команда <<stop>>, вызванная без аргументов, распознается как команда остановки конкретного сервиса из контекста его файла конфигурации Upstart.
+\section{pre--stop} \label{sec:PreStop}
+Синтаксис: \stanza{pre--stop exec | script}. Она выполняется перед тем, как сервис испустит событие \event{stopping} и его главный процесс будет убит.
+
+Остановка сервиса вызывает посылку сигнала SIGTERM для него. Если Что-то нужно сделать перед обработкой этого сигнала, делайте это в этой секции. Возможно также, что за счет более аккуратной обработки завершения работы сервиса, необходимость этой стансы для вас отпадет. 
+
+Однако, если время отработки секции post--stop превышает время указанное в стансе kill timeout или умолчальные пять секунд, то ее использование может оказаться плохой идеей.
+\section{reload signal} \label{sec:ReloadSignal}
+Позволяет переопределить сигнал, используемый для перезагрузки конфигурации сервиса. По умолчанию --- это сигнал SIGHUP. Синтаксис: \stanza{reload signal}{<<ИмяСигнала>>}. При это допускается отбрасывание постоянной части SIG* в его имени. Примеры \begin{alltt}
+\stanza{reload signal}{SIGUSR1}
+\stanza{reload signal}{USR1}
+\end{alltt}
+\section{respawn} \label{sec:respawn}
+\textbf{Внимание.} Не используйте в написанном вами файле конфигурации сервиса эту стансу до тех пор, пока не определите верную стансу expect для него же. Иначе это может привести к неприятным последствиям в его работе.
+
+Без этой стансы сервис перейдет в состояние stop/waiting в любом случае, могущем вызвать его остановку --- аварийную или нет.
+
+С этой стансой, без явного указания команды stop для сервиса, он будет стартовать вновь. Сказанное относится к инструкциям в стансах \hyperref[sec:PostStart]{post--start}, \hyperref[sec:PreStart]{pre--start} и \hyperref[sec:PostStop]{post--stop}. Заметим, что на стансу \hyperref[sec:PreStop]{pre--stop} это не распространяется.
+
+Есть множество причин использовать или наоборот, не использовать ее. Например, для большинства сетевых служб использование respawn в файле сервиса будет хорошим решением. Также, это может быть полезным для \hyperref[sec:Task]{\it задач}, которые не завершаются выходным кодом 0 (перезапустить не выполнившийся до конца сервис-задачу).
+
+Однако, не следует использовать respawn, если демон должен завершаться по приходу сигнала SIGTERM. В противном случае Upstart будет раз за разом пытаться запустить его. Однако, это не будет иметь места в ситуации, когда имеется станса pre--stop. Когда сервис уже останавливается, должна выполниться секция pre--stop; недопустимо, чтобы сервис начал перезапускаться --- он должен быть остановлен в любом случае.
+
+Заметим, что когда сервис перезапустился, переменная окружения \$PROCESS будет установлена в значение имени <<упавшего>> процесса.
+\section{respawn limit} \label{sec:RespawnLimit}
+Да, действительно, respawn и respawn limit --- разные инструкции и могут употребляться совместно в одном файле конфигурации сервиса Upstart. Общий вид синтаксиса инструкции respawn limit таков: \stanza{respawn limit}{MAX\_COUNT\_RESTARTS INTERVAL\_WITHOUT\_RESTART\_IN\_SECONDS}. Параметры по умолчанию равны: первый --- 10 попыток, второй --- 5 секунд между попытками перезапуска. Также существует специальная форма стансы в виде respawn limit unlimited, не ограничивающая число попыток перезапустить <<упавший>> демон (с интервалом в пять секунд между попытками). Пример: \begin{alltt}
+\stanza{respawn limit}{5 10} #так правильно, 5 попыток и десять секунд на каждую
+\stanza{respawn limit}{10 1} #а так - нет, если сервис долго стартует, 
+							#то он может уйти в вечный перезапуск
+\end{alltt}    
+При этом стоит иметь в виду, что станса respawn выполняется автоматически и не эквивалентна команде restart.
+
+Если демон был перезапущен по инструкции respawn limit, то системная переменная окружения \$PROCESS установится в значение <<respawn>>, подробности смотри в мане на событие stopped. 
+\section{script} \label{sec:Script}
+Псевдо--станса, служит признаком начала блока кода на Shell. Блок такого кода должен завершаться конструкцией end script.
+\section{setgid} \label{sec:Setgid}
+Станса появилась в версии 1.4. Служит для смены группы по умолчанию на ту, от которой должен выполняться сервис. Синтаксис: \stanza{setgid}{groupname}. 
+
+Внимание: все секции файла конфигурации сервиса будут исполняться из--под заданной ранее группы. 
+
+Пример: \stanza{setgid}{apache}.
+\section{setuid} \label{sec:Setuid}
+Как и setgid, появилась в версии 1.4. 
+
+Меняет пользователя, от имени которого исполняется сервис, на указанного. На эту стансу действуют те же ограничения, что и на предыдущую.
+
+Синтаксис: \stanza{setuid}{<username>}. 
+
+Пример: \stanza{setgid}{postgres}. Если пользователь не существует в системе, попытка запустить сервис завершится неудачей.
+\section{start on} \label{sec:StartOn}
+Эта станса определяет набор событий, которые являются условием автоматического старта сервиса Upstart.
+
+Синтаксис: start on EVENT [[KEY=]VALUE]... [and|or...]
+
+В условии на запуск обязательно должно определяться одно или несколько имен ключевых событий. Множество событий может комбинироваться с помощью условных операторов and и/или or. Такие комбинированные условия запуска должны заключаться в круглые скобки. Допускается использование переменных окружения (см. \hyperref[sec:EnviromentVariables]{<<Переменные окружения>>}) в формате KEY=VALUE. Правая часть проверок переменных окружения может содержать подстановочные символы в формате, распознаваемом функцией fnmatch (\href{http://manpages.ubuntu.com/manpages/utopic/en/man3/fnmatch.3.html}{fnmatch}). 
+Отрицательные условия выражаются с помощью операции <<!=>> между частями KEY и VALUE.
+Заметим, что условие запуска сервиса срабатывает только в том случае, если файл конфигурации Upstart не содержит инструкцию instance и сам сервис остановлен.
+Заметим также, что условие запуска сервиса должно записываться на той же строке, что и сама станса.
+Правильно: \begin{alltt}
+\stanza{start on}{foo and bar}
+\end{alltt}, неправильно \begin{alltt}
+start on 
+		foo and bar
+\end{alltt} 
+Если в условиях запуска сервиса не заданы никакие переменные окружения, то условия запуска скитаются выполненными для всех экземпляров сервисов с такими условиями. Иначе говоря, при прочих равных условиях все испускаемые события есть события широковещательные для сервисов Upstart.
+Далее будут рассмотрены типичные варианты условий запуска сервиса.
+\subsection{Нормальный запуск}
+Если требуется запустить сервис без учета того, запущены ли какие-нибудь другие сервисы, используется одна из следующих форм условий: \begin{alltt}
+\stanza{start on}{(local-filesystems and net-device-up IFACE != lo)} #Запустить сервис, 
+										#если смонтированы разделы и поднята сеть
+
+\stanza{start on}{runlevel [2345]} #Запустить сервис на уровнях отличных 
+									#от Выключение, Single Mode и Перезапуск
+\stanza{start on}{runlevel [!016]}	#альтернативный вариант этого условия
+\end{alltt}
+\subsection{Запуск, если запущен другой сервис}
+В этом случае условие запуска имеет следующий вид: \begin{alltt}
+\stanza{description}{"My service"}
+\stanza{start on}{\event{started} another-service}
+\end{alltt}
+Целевой сервис запустится только после того как будет запущен сервис another-service.
+\subsection{Запуск одновременно с другим сервисом}
+В этом случае условие запуска имеет следующий вид: \begin{alltt}
+\stanza{description}{"My service"}
+\stanza{start on}{\event{starting} another-service}
+\end{alltt}
+Целевой сервис запустится только если сигнал на запуск получит и another-service.
+Пример: файл конфигурации сервиса memcached. \begin{alltt}
+\stanza{start on}{\event{starting} apache2}
+\stanza{stop on}{\event{stopped} apache2}
+\stanza{respawn}
+\stanza{exec}{/usr/sbin/memcached}
+\end{alltt}
+\section{stop on} \label{sec:StopOn}
+Данная станса оговаривает условия остановки сервиса. Все синтаксические правила для нее совпадают с теми же правилами для стансы start on (см. \autoref{sec:StartOn}). Далее приводятся примеры типовых условий останвки сервиса.
+\subsection{Простая остановка по условию}
+\begin{alltt}
+\stanza{stop on}{runlevel [016]} #Остановиться если система <<гасится>>,
+				#в Single Mode или перезагружается
+\end{alltt} 
+\subsection{Остановка перед остановкой сервиса-зависимости}
+Общая форма записи этого условия такова: \begin{alltt}
+\stanza{stop on}{\event{stopping}other-service}
+\end{alltt}
+\subsection{Остановка после зависимого сервиса}
+Пример файла конфигурации сервиса: \begin{alltt}
+\stanza{stop on}{\event{stopped}other-service}
+\end{alltt}
+\section{task}
+Концептуально \textit{задачи} представляют собой короткоживущие сервисы. Без этой стансы служба не будет разблокирована, пока не пройдет фазу started. В этом случае она испускает событие \event{starting}, выполняется (если есть) секция pre--start, а затем основная, затем выполняется (если есть) секция post--start и испускается событие \event{started}. На всех этих этапах может осуществляться реакция на поступающие события.
+
+Со стансой task служба блокируется для всех поступающих событий вплоть до того момента, когда она достигнет состояния stopped.
+
+Типичным вариантом использования стансы является запуск по условию некоей подготовительной программы, необходимой для отработки другого (главного) сервиса.
+
+Пример файла конфигурации: \begin{alltt}
+# pre-warm-memcache
+\stanza{start on}{\event{started}memcached}
+\stanza{task}
+\stanza{exec}{/path/to/pre-warm-memcached}
+\end{alltt} 
+Также может быть добавлен другой демон queue-worker, который обрабатывает очередь запросов в случае остановки сервиса memcached: \begin{alltt}
+# queue-worker
+\stanza{start on}{\event{stopped}pre-warm-memcache}
+\stanza{stop on}{\event{stopping}memcached}
+\stanza{respawn}
+\stanza{exec}{/usr/local/bin/queue-worker}
+\end{alltt} 
+Ключевой момент демонстрирует конструкция start on stopped pre-warm-memcache: это означает запуск только в тот момент, когда задача будет полностью завершена.
+\section{umask}
+Синтаксис: umask <восьмеричное\_число>. Задает режим доступа для запущенного сервиса. См. man 2 umask для выяснения деталей. Пример: \begin{alltt}
+\stanza{umask}{0002}
+\end{alltt}  
+\section{usage}
+Выводит краткое текстовое сообщение о правильном запуске сервиса при попытке его запуска пользователем. Пример: \begin{alltt}
+\stanza{instance}{\$DB}
+\stanza{usage}{"DB - name of database instance"}
+\end{alltt}
+Станса срабатывает при запуске сервиса без корректно переданных ему параметров.
+\section{version}
+Описательная станса. Служит для указания версии сервиса. Не обрабатывает утилитой init.
+
+Пример: \begin{alltt}
+\stanza{version}{"1.0"}
+\end{alltt}
+\section{Переменные окружения} \label{sec:EnviromentVariables}
